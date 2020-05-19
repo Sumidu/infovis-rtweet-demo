@@ -16,7 +16,7 @@ library(lubridate)
 
 ## Tweets
 ```{r}
-tweets <- rtweet::search_tweets(q = "#Arzt", n = 10000, include_rts = TRUE)
+tweets <- rtweet::search_tweets(q = "#Arzt", n = 10000, include_rts = TRUE, lang = "de")
 
 tweets %>% filter(screen_name == "DIEZEIT")
 
@@ -75,13 +75,16 @@ rt %>% filter(lang == "de")
 ```
 
 # Automatische Textanalyse (Natural Language Processing = NLP)
+-Tokenization (in Wörter zerlegen)
+-Stopwörter gefiltert
+-Häufigsten Wörter angezeigt
 
 ```{r}
 names(rt)
 
 library(tidytext)
 
-words_from_tweets <- rt %>% 
+words_from_tweets <- tl %>% 
   filter(lang == "de") %>% 
   select(screen_name, status_id, text, favorite_count) %>% 
   unnest_tokens(word, text)
@@ -93,15 +96,16 @@ my_stopwords <- tibble(word = stopwords::stopwords("de")) %>%
 
 words_from_tweets %>% 
   anti_join(my_stopwords) %>% 
-  group_by(word) %>% 
+  group_by(word, screen_name) %>% 
   count() %>% 
   arrange(desc(n)) %>% 
   head(20) %>% 
   ggplot() +
-  aes(x = reorder(factor(word), n), y = n) +
+  aes(x = reorder(factor(word), n), y = n, fill = screen_name) +
   geom_col() +
   xlab("") +
-  coord_flip()
+  coord_flip() +
+  facet_wrap(~screen_name, scales = "free")
 
 
 
