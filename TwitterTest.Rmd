@@ -99,7 +99,8 @@ words_from_tweets %>%
   group_by(word, screen_name) %>% 
   count() %>% 
   arrange(desc(n)) %>% 
-  head(20) %>% 
+  group_by(screen_name) %>% 
+  top_n(20) %>% 
   ggplot() +
   aes(x = reorder(factor(word), n), y = n, fill = screen_name) +
   geom_col() +
