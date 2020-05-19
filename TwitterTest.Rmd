@@ -1,0 +1,109 @@
+---
+title: "TwitterTest"
+author: "André Calero Valdez"
+date: "5/19/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(rtweet)
+library(lubridate)
+```
+
+# Verbindung mit Twitter aufbauen
+
+## Tweets
+```{r}
+tweets <- rtweet::search_tweets(q = "#Arzt", n = 10000, include_rts = TRUE)
+
+tweets %>% filter(screen_name == "DIEZEIT")
+
+tweets %>% filter(status_id == "1260108474744274945")
+```
+
+## User Daten
+```{r}
+user_data <- rtweet::users_data(tweets)  %>% unique()
+
+user_data %>% arrange(desc(followers_count))
+
+user_data %>% ggplot() +
+  aes(x = followers_count) +
+  geom_histogram()
+```
+
+# Timelines
+
+```{r}
+tl <- rtweet::get_timelines(user = c("DIEZEIT", "derspiegel"), n = 1000)
+
+
+tl %>% group_by(screen_name) %>% 
+  summarise(beginn = min(created_at))
+
+tl %>% filter(created_at > dmy("30.04.2020")) %>% 
+  group_by(screen_name) %>% ts_plot()
+
+```
+
+
+
+```{r}
+## Stream keywords used to filter tweets
+q <- "covid19,corona,stayhome"
+
+## Stream time in seconds so for one minute set timeout = 60
+## For larger chunks of time, I recommend multiplying 60 by the number
+## of desired minutes. This method scales up to hours as well
+## (x * 60 = x mins, x * 60 * 60 = x hours)
+## Stream for 30 minutes
+streamtime <- 60
+
+## Filename to save json data (backup)
+filename <- "data/rtelect.json"
+
+## Stream election tweets
+rt <- stream_tweets(q = q, timeout = streamtime, file_name = filename, lang="de")
+```
+
+```{r}
+rt <- parse_stream("data/rtelect.json")
+
+rt %>% filter(lang == "de")
+```
+
+# Automatische Textanalyse (Natural Language Processing = NLP)
+
+```{r}
+names(rt)
+
+library(tidytext)
+
+words_from_tweets <- rt %>% 
+  filter(lang == "de") %>% 
+  select(screen_name, status_id, text, favorite_count) %>% 
+  unnest_tokens(word, text)
+
+my_stopwords <- tibble(word = stopwords::stopwords("de")) %>% 
+                bind_rows(tibble(word = c("t.co", "https", "mehr", "dass","amp",
+                                          "eigentlich", "ab", "viele", "trotz", "19",
+                                          "11", "via", "mio", "1")))
+
+words_from_tweets %>% 
+  anti_join(my_stopwords) %>% 
+  group_by(word) %>% 
+  count() %>% 
+  arrange(desc(n)) %>% 
+  head(20) %>% 
+  ggplot() +
+  aes(x = reorder(factor(word), n), y = n) +
+  geom_col() +
+  xlab("") +
+  coord_flip()
+
+
+
+```
+
