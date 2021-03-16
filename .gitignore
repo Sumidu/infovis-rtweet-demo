@@ -28,3 +28,4 @@ vignettes/*.pdf
 .Renviron
 data
 .twitter_token.rds
+TwitterTest.html

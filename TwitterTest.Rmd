@@ -112,3 +112,73 @@ words_from_tweets %>%
 
 ```
 
+
+# Social Network Analysis
+
+```{r}
+friends <- get_friends("sumidu")
+
+result <- lookup_users(friends$user_id)
+```
+
+
+```{r}
+
+result %>% select(user_id, screen_name, friends_count) %>% arrange(desc(friends_count)) %>% head()
+
+
+step1 <- friends %>% left_join(result) %>% select(user, screen_name, friends_count) %>% arrange(friends_count) %>% filter(friends_count > 1)
+
+step1 
+
+test <- step1$screen_name %>% head()
+
+fof <- get_friends(test, retryonratelimit = T)
+
+result_fof <- lookup_users(fof$user_id)
+
+
+list_fof <- fof %>% left_join(result_fof) %>% select(user, screen_name, friends_count) 
+
+
+step1 <- friends %>% left_join(result) %>% select(user, screen_name, friends_count) 
+
+network <- list_fof %>% bind_rows(step1)
+
+
+
+library(igraph)
+library(tidygraph)
+set.seed(124567) 
+
+network %>% head(40) %>% 
+  graph_from_data_frame() %>% 
+  as_tbl_graph() %>% 
+  ggraph::ggraph(layout = "fr") + 
+  ggraph::geom_edge_link() + 
+  ggraph::geom_node_point(
+    size = 1
+    ) +
+  ggraph::geom_node_label(mapping = aes(label = name)) + theme_void()
+
+```
+
+
+```{r}
+library(threejs)  
+fed <-  network %>% head(40) %>% 
+  graph_from_data_frame() %>% 
+  as_tbl_graph() %>% 
+  tidygraph::as.igraph()  
+
+V(fed)$size <- 1 
+graph_attr(fed, "layout") <- NULL  
+graphjs(g = fed, bg = "gray10",  
+        showLabels = T,  
+        layout = list(  
+          layout_with_fr(fed, dim = 3)),  
+                  main = "")
+
+
+```
+
